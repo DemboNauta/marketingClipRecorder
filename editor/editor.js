@@ -8,6 +8,8 @@ let ext = 'webm';
 let selectedClickIdx = null;
 let isPlaying = false;
 let rafId = null;
+let isDragging = false;
+let dragInfo = null; // { idx, type, initialValue, initialT }
 
 // Default zoom settings (used as initial values per click)
 let defaults = {
@@ -15,6 +17,7 @@ let defaults = {
   zoomInDuration: 150,
   holdDuration: 600,
   zoomOutDuration: 250,
+  zoomOffset: 0,
 };
 
 // --- DOM refs ---
@@ -51,24 +54,37 @@ function getZoomState(currentTimeSec, click) {
   if (!click.enabled) return { scale: 1 };
 
   const t = currentTimeSec * 1000; // ms
-  const { t: clickTime, zoomLevel, zoomInDuration, holdDuration, zoomOutDuration } = click;
+  const { t: clickTime, zoomLevel, zoomInDuration, holdDuration, zoomOutDuration, zoomOffset = 0 } = click;
 
-  // Zoom-in starts before the click so it peaks exactly AT click time
-  const zoomStart = clickTime - zoomInDuration;
-  const holdEnd   = clickTime + holdDuration;
+  // Zoom peaks at clickTime + zoomOffset
+  const zoomPeak  = clickTime + zoomOffset;
+  const zoomStart = zoomPeak - zoomInDuration;
+  const holdEnd   = zoomPeak + holdDuration;
   const outEnd    = holdEnd + zoomOutDuration;
 
   if (t < zoomStart || t > outEnd) return { scale: 1 };
 
-  if (t <= clickTime) {
-    const p = (t - zoomStart) / zoomInDuration;
-    return { scale: 1 + (zoomLevel - 1) * easings.out(p), cx: click.nx, cy: click.ny };
+  let currentScale = 1;
+  let progress = 0; // 0 to 1 during zoom in, stays 1 during hold, 1 to 0 during zoom out
+
+  if (t <= zoomPeak) {
+    progress = (t - zoomStart) / zoomInDuration;
+    currentScale = 1 + (zoomLevel - 1) * easings.out(progress);
+  } else if (t <= holdEnd) {
+    progress = 1;
+    currentScale = zoomLevel;
+  } else {
+    const p = (t - holdEnd) / zoomOutDuration;
+    progress = 1 - easings.in(p);
+    currentScale = 1 + (zoomLevel - 1) * progress;
   }
-  if (t <= holdEnd) {
-    return { scale: zoomLevel, cx: click.nx, cy: click.ny };
-  }
-  const p = (t - holdEnd) / zoomOutDuration;
-  return { scale: zoomLevel - (zoomLevel - 1) * easings.in(p), cx: click.nx, cy: click.ny };
+
+  return { 
+    scale: currentScale, 
+    cx: click.nx, 
+    cy: click.ny, 
+    progress: progress // Use progress to push the "center" towards the click
+  };
 }
 
 function getActiveZoom(currentTimeSec) {
@@ -93,12 +109,36 @@ function renderFrame(timeSec) {
   const zoom = getActiveZoom(timeSec);
 
   if (zoom && zoom.scale !== 1) {
-    const cx = zoom.cx * W;
-    const cy = zoom.cy * H;
+    const s = zoom.scale;
+    const nx = zoom.cx;
+    const ny = zoom.cy;
+    
+    // Position of the click in video coordinates
+    const vx = nx * W;
+    const vy = ny * H;
+
+    // We want to transform the video such that:
+    // 1. It is scaled by 's'
+    // 2. The click point (vx, vy) is as close as possible to the center of the canvas (W/2, H/2)
+    // 3. The video still covers the whole canvas [0,W]x[0,H]
+
+    // Width and height of the scaled video
+    const sw = W * s;
+    const sh = H * s;
+
+    // Ideal top-left position (tx, ty) to center the click (vx, vy) at (W/2, H/2)
+    // tx + vx * s = W/2  =>  tx = W/2 - vx * s
+    let tx = W/2 - vx * s;
+    let ty = H/2 - vy * s;
+
+    // Clamp top-left position so we don't show area outside the video
+    // tx must be in [W - sw, 0]
+    tx = Math.max(W - sw, Math.min(0, tx));
+    ty = Math.max(H - sh, Math.min(0, ty));
+
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(zoom.scale, zoom.scale);
-    ctx.translate(-cx, -cy);
+    ctx.translate(tx, ty);
+    ctx.scale(s, s);
     ctx.drawImage(sourceVideo, 0, 0, W, H);
     ctx.restore();
   } else {
@@ -163,6 +203,7 @@ async function loadData() {
     zoomInDuration: defaults.zoomInDuration,
     holdDuration: defaults.holdDuration,
     zoomOutDuration: defaults.zoomOutDuration,
+    zoomOffset: defaults.zoomOffset,
     enabled: true,
   }));
 
@@ -245,8 +286,8 @@ function renderClickList() {
         </div>
         <div class="click-setting-row">
           <label>Entrada</label>
-          <input type="range" class="p-in" min="100" max="800" step="50" value="${click.zoomInDuration}">
-          <span class="val">${click.zoomInDuration}ms</span>
+          <input type="range" class="p-in" min="100" max="5000" step="50" value="${Math.round(click.zoomInDuration)}">
+          <span class="val">${Math.round(click.zoomInDuration)}ms</span>
         </div>
         <div class="click-setting-row">
           <label>Mantener</label>
@@ -255,8 +296,13 @@ function renderClickList() {
         </div>
         <div class="click-setting-row">
           <label>Salida</label>
-          <input type="range" class="p-out" min="100" max="1000" step="50" value="${click.zoomOutDuration}">
-          <span class="val">${click.zoomOutDuration}ms</span>
+          <input type="range" class="p-out" min="100" max="5000" step="50" value="${Math.round(click.zoomOutDuration)}">
+          <span class="val">${Math.round(click.zoomOutDuration)}ms</span>
+        </div>
+        <div class="click-setting-row">
+          <label>Offset</label>
+          <input type="range" class="p-offset" min="-500" max="500" step="10" value="${Math.round(click.zoomOffset || 0)}">
+          <span class="val">${Math.round(click.zoomOffset || 0)}ms</span>
         </div>
       </div>
     `;
@@ -271,9 +317,10 @@ function renderClickList() {
 
     // Sliders
     bindSlider(item.querySelector('.p-zoom'),  v => { clicks[i].zoomLevel = parseFloat(v); }, '×', 1);
-    bindSlider(item.querySelector('.p-in'),    v => { clicks[i].zoomInDuration = parseInt(v); }, 'ms');
-    bindSlider(item.querySelector('.p-hold'),  v => { clicks[i].holdDuration = parseInt(v); }, 'ms');
-    bindSlider(item.querySelector('.p-out'),   v => { clicks[i].zoomOutDuration = parseInt(v); }, 'ms');
+    bindSlider(item.querySelector('.p-in'),    v => { clicks[i].zoomInDuration = Math.round(v); }, 'ms');
+    bindSlider(item.querySelector('.p-hold'),  v => { clicks[i].holdDuration = Math.round(v); }, 'ms');
+    bindSlider(item.querySelector('.p-out'),   v => { clicks[i].zoomOutDuration = Math.round(v); }, 'ms');
+    bindSlider(item.querySelector('.p-offset'),v => { clicks[i].zoomOffset = Math.round(v); }, 'ms');
 
     // Click to seek to that timestamp
     item.addEventListener('click', (e) => {
@@ -305,25 +352,160 @@ function renderClickMarkers() {
   clickMarkersEl.innerHTML = '';
   if (!sourceVideo.duration) return;
 
+  const totalTime = sourceVideo.duration * 1000;
+
   clicks.forEach((click, i) => {
-    const pct = (click.t / 1000 / sourceVideo.duration) * 100;
+    const isSelected = i === selectedClickIdx;
+    
+    // Timing calculations
+    const zoomPeak  = click.t + (click.zoomOffset || 0);
+    const zoomStart = zoomPeak - click.zoomInDuration;
+    const zoomEnd   = zoomPeak + click.holdDuration + click.zoomOutDuration;
+
+    // Percentages
+    const startPct = (zoomStart / totalTime) * 100;
+    const endPct   = (zoomEnd / totalTime) * 100;
+    const clickPct = (click.t / totalTime) * 100;
+
+    // 1. Zoom range background
+    const range = document.createElement('div');
+    range.className = 'click-range' + (isSelected ? ' active' : '') + (!click.enabled ? ' disabled' : '');
+    range.style.left = startPct + '%';
+    range.style.width = Math.max(0.5, endPct - startPct) + '%';
+    range.style.cursor = 'grab';
+    range.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      selectedClickIdx = i;
+      startDrag(e, i, 'range');
+    });
+    range.addEventListener('click', (e) => e.stopPropagation());
+    clickMarkersEl.appendChild(range);
+
+    // 2. Start/End dots (2 puntitos)
+    if (click.enabled) {
+      const dotStart = document.createElement('div');
+      dotStart.className = 'click-dot' + (isSelected ? ' active' : '');
+      dotStart.style.left = startPct + '%';
+      dotStart.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        selectedClickIdx = i;
+        startDrag(e, i, 'start');
+      });
+      clickMarkersEl.appendChild(dotStart);
+
+      const dotEnd = document.createElement('div');
+      dotEnd.className = 'click-dot' + (isSelected ? ' active' : '');
+      dotEnd.style.left = endPct + '%';
+      dotEnd.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        selectedClickIdx = i;
+        startDrag(e, i, 'end');
+      });
+      clickMarkersEl.appendChild(dotEnd);
+    }
+
+    // 3. Click marker (The peak/event)
     const marker = document.createElement('div');
     marker.className = 'click-marker'
-      + (i === selectedClickIdx ? ' active' : '')
+      + (isSelected ? ' active' : '')
       + (!click.enabled ? ' disabled' : '');
-    marker.style.left = pct + '%';
+    marker.style.left = clickPct + '%';
     marker.title = `Click #${i + 1} — ${fmtTime(click.t / 1000)}`;
+
+    marker.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      selectedClickIdx = i;
+      startDrag(e, i, 'click');
+    });
 
     marker.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectedClickIdx = i;
-      seekTo(click.t / 1000);
-      renderClickList();
-      renderClickMarkers();
+      if (!isDragging) {
+        selectedClickIdx = i;
+        seekTo(click.t / 1000);
+        renderClickList();
+        renderClickMarkers();
+      }
     });
 
     clickMarkersEl.appendChild(marker);
   });
+}
+
+// --- DRAG logic ---
+function startDrag(e, idx, type) {
+  isDragging = true;
+  const click = clicks[idx];
+  const clickTime = click.t;
+  const zoomPeak = clickTime + (click.zoomOffset || 0);
+
+  let initialVal = 0;
+  if (type === 'click') initialVal = clickTime;
+  else if (type === 'start') initialVal = click.zoomInDuration;
+  else if (type === 'end') initialVal = click.zoomOutDuration;
+  else if (type === 'range') initialVal = click.zoomOffset || 0;
+
+  dragInfo = {
+    idx,
+    type,
+    initialVal,
+    initialX: e.clientX,
+    zoomPeak, // Pre-calculated peak during start for start/end drags
+    holdEnd: zoomPeak + click.holdDuration, // For end dot drag
+  };
+
+  window.addEventListener('pointermove', onDragMove);
+  window.addEventListener('pointerup', onDragStop);
+  document.body.style.cursor = 'ew-resize';
+  renderClickList();
+  renderClickMarkers();
+}
+
+function onDragMove(e) {
+  if (!isDragging || !dragInfo) return;
+  const { idx, type, initialVal, initialX, zoomPeak, holdEnd } = dragInfo;
+  const click = clicks[idx];
+  const totalDuration = sourceVideo.duration * 1000;
+  const timelineRect = timeline.getBoundingClientRect();
+
+  const dx = e.clientX - initialX;
+  const dt = (dx / timelineRect.width) * totalDuration;
+
+  if (type === 'click') {
+    click.t = Math.round(Math.max(0, Math.min(totalDuration, initialVal + dt)));
+  } else if (type === 'start') {
+    const newT = (zoomPeak - initialVal) + dt;
+    click.zoomInDuration = Math.round(Math.max(50, zoomPeak - newT));
+  } else if (type === 'end') {
+    const newT = (holdEnd + initialVal) + dt;
+    click.zoomOutDuration = Math.round(Math.max(50, newT - holdEnd));
+  } else if (type === 'range') {
+    click.zoomOffset = Math.round(initialVal + dt);
+  }
+
+  // Live preview
+  if (sourceVideo.paused) {
+    if (type === 'click') sourceVideo.currentTime = click.t / 1000;
+    else if (type === 'range' || type === 'start') sourceVideo.currentTime = (click.t + click.zoomOffset) / 1000;
+    else {
+      // For end drag, maybe show the end of the zoom out
+      sourceVideo.currentTime = (click.t + click.zoomOffset + click.holdDuration + click.zoomOutDuration) / 1000;
+    }
+    renderFrame(sourceVideo.currentTime);
+  }
+
+  renderClickList();
+  renderClickMarkers();
+}
+
+function onDragStop() {
+  isDragging = false;
+  dragInfo = null;
+  window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragStop);
+  document.body.style.cursor = '';
+  renderClickList();
+  renderClickMarkers();
 }
 
 // --- Seek ---
@@ -381,6 +563,7 @@ function setupDefaultSliders() {
     ['defaultZoomIn', 'defaultZoomInVal', 'zoomInDuration', 'ms', 0],
     ['defaultHold', 'defaultHoldVal', 'holdDuration', 'ms', 0],
     ['defaultZoomOut', 'defaultZoomOutVal', 'zoomOutDuration', 'ms', 0],
+    ['defaultOffset', 'defaultOffsetVal', 'zoomOffset', 'ms', 0],
   ];
   map.forEach(([id, valId, key, unit, dec]) => {
     const slider = document.getElementById(id);
@@ -399,6 +582,7 @@ function setupDefaultSliders() {
       zoomInDuration: defaults.zoomInDuration,
       holdDuration: defaults.holdDuration,
       zoomOutDuration: defaults.zoomOutDuration,
+      zoomOffset: defaults.zoomOffset,
     }));
     renderClickList();
     if (sourceVideo.paused) renderFrame(sourceVideo.currentTime);

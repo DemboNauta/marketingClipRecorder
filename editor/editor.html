@@ -48,7 +48,7 @@
         </div>
         <div class="setting-row">
           <label>Entrada</label>
-          <input type="range" id="defaultZoomIn" min="100" max="800" step="50" value="150">
+          <input type="range" id="defaultZoomIn" min="100" max="5000" step="50" value="150">
           <span class="setting-val" id="defaultZoomInVal">150ms</span>
         </div>
         <div class="setting-row">
@@ -58,8 +58,13 @@
         </div>
         <div class="setting-row">
           <label>Salida</label>
-          <input type="range" id="defaultZoomOut" min="100" max="1000" step="50" value="250">
+          <input type="range" id="defaultZoomOut" min="100" max="5000" step="50" value="250">
           <span class="setting-val" id="defaultZoomOutVal">250ms</span>
+        </div>
+        <div class="setting-row">
+          <label>Offset</label>
+          <input type="range" id="defaultOffset" min="-500" max="500" step="50" value="0">
+          <span class="setting-val" id="defaultOffsetVal">0ms</span>
         </div>
         <button id="applyDefaultsBtn" class="btn btn-sm">Aplicar a todos</button>
       </div>
