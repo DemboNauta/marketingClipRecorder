@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clip Editor — Marketing Recorder</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="app-logo">
+        <div class="logo-dot"></div>
+        <span>Clip Editor</span>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button id="previewBtn" class="btn">▶ Preview</button>
+      <button id="exportBtn" class="btn btn-primary">⬇ Exportar video</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <!-- Video canvas -->
+    <div class="canvas-area">
+      <canvas id="previewCanvas"></canvas>
+      <video id="sourceVideo" style="display:none" preload="auto"></video>
+      <div class="canvas-overlay" id="canvasOverlay">
+        <div class="loading-msg" id="loadingMsg">Cargando grabación...</div>
+      </div>
+    </div>
+
+    <!-- Sidebar: click list -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        Clicks grabados <span class="badge" id="clickCount">0</span>
+      </div>
+      <div class="sidebar-hint" id="sidebarHint">
+        Sin clicks registrados. Graba navegando por tu app y haz clicks en los elementos que quieres destacar.
+      </div>
+      <div id="clickList" class="click-list"></div>
+
+      <div class="global-settings">
+        <div class="settings-title">Valores por defecto</div>
+        <div class="setting-row">
+          <label>Zoom</label>
+          <input type="range" id="defaultZoom" min="1.5" max="4" step="0.1" value="2.0">
+          <span class="setting-val" id="defaultZoomVal">2.0×</span>
+        </div>
+        <div class="setting-row">
+          <label>Entrada</label>
+          <input type="range" id="defaultZoomIn" min="100" max="800" step="50" value="150">
+          <span class="setting-val" id="defaultZoomInVal">150ms</span>
+        </div>
+        <div class="setting-row">
+          <label>Mantener</label>
+          <input type="range" id="defaultHold" min="300" max="4000" step="100" value="600">
+          <span class="setting-val" id="defaultHoldVal">600ms</span>
+        </div>
+        <div class="setting-row">
+          <label>Salida</label>
+          <input type="range" id="defaultZoomOut" min="100" max="1000" step="50" value="250">
+          <span class="setting-val" id="defaultZoomOutVal">250ms</span>
+        </div>
+        <button id="applyDefaultsBtn" class="btn btn-sm">Aplicar a todos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline-bar">
+    <div class="playback-controls">
+      <button id="rewindBtn" class="btn-icon" title="Inicio">⏮</button>
+      <button id="playPauseBtn" class="btn-icon" title="Play/Pause">▶</button>
+      <span class="time-display">
+        <span id="currentTime">0:00.0</span>
+        <span class="time-sep">/</span>
+        <span id="totalTime">0:00.0</span>
+      </span>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="timeline-bg" id="timelineBg">
+        <div class="timeline-played" id="timelinePlayed"></div>
+      </div>
+      <div class="click-markers" id="clickMarkers"></div>
+    </div>
+  </div>
+
+  <!-- Export progress overlay -->
+  <div class="export-overlay" id="exportOverlay" style="display:none">
+    <div class="export-modal">
+      <div class="export-title">Exportando video...</div>
+      <div class="export-progress-bar">
+        <div class="export-progress-fill" id="exportFill"></div>
+      </div>
+      <div class="export-percent" id="exportPercent">0%</div>
+      <div class="export-hint">No cierres esta pestaña hasta que termine</div>
+    </div>
+  </div>
+
+  <script src="../lib/ffmpeg.min.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  background: #1a1a1f;
+  color: #e0e0e8;
+  padding: 12px;
+  user-select: none;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #555;
+  transition: background 0.3s;
+}
+
+.logo-dot.recording {
+  background: #e03c3c;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.logo-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.timer {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #888;
+  font-weight: 500;
+}
+
+.timer.recording {
+  color: #e03c3c;
+}
+
+/* Record button */
+.record-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #e03c3c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.record-btn:hover {
+  background: #c93030;
+}
+
+.record-btn:active {
+  transform: scale(0.98);
+}
+
+.record-btn.stop {
+  background: #3a3a45;
+}
+
+.record-btn.stop:hover {
+  background: #4a4a58;
+}
+
+/* Sections */
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #666;
+  margin: 10px 0 6px;
+}
+
+/* Controls */
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.control-row label {
+  color: #aaa;
+  font-size: 12px;
+  min-width: 90px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #e03c3c;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #ff5555;
+}
+
+.val {
+  font-size: 11px;
+  color: #888;
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+select {
+  flex: 1;
+  background: #2a2a32;
+  border: 1px solid #3a3a45;
+  color: #e0e0e8;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+select:hover {
+  border-color: #555;
+}
+
+/* Checkbox row */
+.checkbox-row {
+  justify-content: space-between;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #e03c3c;
+}
+
+/* Status message */
+.status-msg {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  min-height: 16px;
+}
+
+.status-msg.error {
+  color: #e05050;
+}
+
+.status-msg.success {
+  color: #50c878;
+}

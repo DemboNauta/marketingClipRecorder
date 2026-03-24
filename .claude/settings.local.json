@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(mkdir -p icons)",
+      "Bash(python3 -:*)",
+      "Bash(node setup.js)",
+      "Bash(node -e \":*)"
+    ]
+  }
+}
