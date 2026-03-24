@@ -25,6 +25,8 @@ function activate(cfg, startTime) {
   isActive = true;
   injectStyles();
   document.addEventListener('click', onDocClick, true);
+  document.addEventListener('keydown', onKeyDown, true);
+  
   console.log('[MCR content] activated, startTime:', startTime, 'triggerKey:', cfg.zoomTriggerKey);
 }
 
@@ -32,11 +34,20 @@ function deactivate() {
   if (!isActive) return;
   isActive = false;
   document.removeEventListener('click', onDocClick, true);
+  document.removeEventListener('keydown', onKeyDown, true);
+  
   removeStyles();
   document.querySelectorAll(`.${RIPPLE_CLS}`).forEach(el => el.remove());
 }
 
-// --- Styles (solo ripple) ---
+function onKeyDown(e) {
+  if (isActive && e.altKey && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+  }
+}
+
+// --- Styles (ripple + overlay) ---
 
 function injectStyles() {
   if (document.getElementById(STYLE_ID)) return;

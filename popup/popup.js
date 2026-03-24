@@ -19,24 +19,7 @@ const btnIcon = document.getElementById('btnIcon');
 const statusDot = document.getElementById('statusDot');
 const timerEl = document.getElementById('timer');
 const statusMsg = document.getElementById('statusMsg');
-
-const sliders = {
-  zoomLevel: { el: document.getElementById('zoomLevel'), val: document.getElementById('zoomLevelVal'), fmt: v => `${parseFloat(v).toFixed(1)}×` },
-  zoomInDuration: { el: document.getElementById('zoomInDuration'), val: document.getElementById('zoomInDurationVal'), fmt: v => `${v}ms` },
-  holdDuration: { el: document.getElementById('holdDuration'), val: document.getElementById('holdDurationVal'), fmt: v => `${v}ms` },
-  zoomOutDuration: { el: document.getElementById('zoomOutDuration'), val: document.getElementById('zoomOutDurationVal'), fmt: v => `${v}ms` },
-};
-
-const selects = {
-  easingIn: document.getElementById('easingIn'),
-  easingOut: document.getElementById('easingOut'),
-  zoomTriggerKey: document.getElementById('zoomTriggerKey'),
-};
-
-const checkboxes = {
-  audioCaptureEnabled: document.getElementById('audioCaptureEnabled'),
-  clickIndicator: document.getElementById('clickIndicator'),
-};
+const clickIndicatorCheckbox = document.getElementById('clickIndicator');
 
 // --- State ---
 let isRecording = false;
@@ -45,9 +28,13 @@ let startTime = null;
 
 // --- Init ---
 async function init() {
+  // Configuración
   const stored = await chrome.storage.sync.get('mcrConfig');
-  const config = Object.assign({}, DEFAULT_CONFIG, stored.mcrConfig || {});
-  applyConfigToUI(config);
+  if (stored.mcrConfig && typeof stored.mcrConfig.clickIndicator !== 'undefined') {
+    clickIndicatorCheckbox.checked = stored.mcrConfig.clickIndicator;
+  } else {
+    clickIndicatorCheckbox.checked = DEFAULT_CONFIG.clickIndicator;
+  }
 
   // Check recording state from background
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (resp) => {
@@ -58,32 +45,18 @@ async function init() {
   });
 }
 
-function applyConfigToUI(config) {
-  for (const [key, { el, val, fmt }] of Object.entries(sliders)) {
-    el.value = config[key];
-    val.textContent = fmt(config[key]);
+// Guarda la configuración dinámica si cambian el checkbox
+clickIndicatorCheckbox.addEventListener('change', async () => {
+  const config = Object.assign({}, DEFAULT_CONFIG, {
+    clickIndicator: clickIndicatorCheckbox.checked
+  });
+  await chrome.storage.sync.set({ mcrConfig: config });
+  
+  // Update in real-time if already recording
+  if (isRecording) {
+    chrome.runtime.sendMessage({ type: 'CONFIG_UPDATED', config });
   }
-  for (const [key, el] of Object.entries(selects)) {
-    el.value = config[key];
-  }
-  for (const [key, el] of Object.entries(checkboxes)) {
-    el.checked = config[key];
-  }
-}
-
-function getConfigFromUI() {
-  const config = {};
-  for (const [key, { el }] of Object.entries(sliders)) {
-    config[key] = parseFloat(el.value);
-  }
-  for (const [key, el] of Object.entries(selects)) {
-    config[key] = el.value;
-  }
-  for (const [key, el] of Object.entries(checkboxes)) {
-    config[key] = el.checked;
-  }
-  return config;
-}
+});
 
 // --- Recording UI state ---
 function setRecordingUI(recording, recordStartTime = null) {
@@ -138,13 +111,16 @@ recordBtn.addEventListener('click', async () => {
       setStatus('Video descargado.', 'success');
     });
   } else {
-    const config = getConfigFromUI();
-    await chrome.storage.sync.set({ mcrConfig: config });
-
     recordBtn.disabled = true;
     setStatus('Iniciando...', '');
 
-    chrome.runtime.sendMessage({ type: 'START_RECORDING', config }, (resp) => {
+    const configToStart = Object.assign({}, DEFAULT_CONFIG, {
+      clickIndicator: clickIndicatorCheckbox.checked
+    });
+    // Forzamos guardar por si acaso
+    await chrome.storage.sync.set({ mcrConfig: configToStart });
+
+    chrome.runtime.sendMessage({ type: 'START_RECORDING', config: configToStart }, (resp) => {
       recordBtn.disabled = false;
       if (chrome.runtime.lastError || (resp && resp.error)) {
         const err = (resp && resp.error) || chrome.runtime.lastError.message;
@@ -155,35 +131,5 @@ recordBtn.addEventListener('click', async () => {
     });
   }
 });
-
-// --- Live config update during recording ---
-let configUpdateTimeout = null;
-function onConfigChange() {
-  const config = getConfigFromUI();
-
-  // Update display values
-  for (const [key, { el, val, fmt }] of Object.entries(sliders)) {
-    val.textContent = fmt(el.value);
-  }
-
-  // Debounce save + live update
-  clearTimeout(configUpdateTimeout);
-  configUpdateTimeout = setTimeout(async () => {
-    await chrome.storage.sync.set({ mcrConfig: config });
-    if (isRecording) {
-      chrome.runtime.sendMessage({ type: 'CONFIG_UPDATED', config });
-    }
-  }, 200);
-}
-
-for (const { el } of Object.values(sliders)) {
-  el.addEventListener('input', onConfigChange);
-}
-for (const el of Object.values(selects)) {
-  el.addEventListener('change', onConfigChange);
-}
-for (const el of Object.values(checkboxes)) {
-  el.addEventListener('change', onConfigChange);
-}
 
 init();

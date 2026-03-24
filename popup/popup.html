@@ -19,80 +19,14 @@
     <span class="btn-icon" id="btnIcon">⏺</span>
     <span id="btnLabel">Grabar</span>
   </button>
-
-  <div class="section-title">Zoom</div>
-
-  <div class="control-row">
-    <label>Nivel de zoom</label>
-    <div class="slider-row">
-      <input type="range" id="zoomLevel" min="1.5" max="4.0" step="0.1" value="2.5">
-      <span class="val" id="zoomLevelVal">2.5×</span>
-    </div>
+  <div class="shortcut-hint" id="shortcutHint" style="text-align:center; font-size:12px; color:#aaa; margin-top:8px;">
+    Atajo: <b>Alt + S</b> para detener la grabación
   </div>
 
-  <div class="control-row">
-    <label>Zoom in</label>
-    <div class="slider-row">
-      <input type="range" id="zoomInDuration" min="100" max="800" step="50" value="300">
-      <span class="val" id="zoomInDurationVal">300ms</span>
-    </div>
-  </div>
-
-  <div class="control-row">
-    <label>Mantener</label>
-    <div class="slider-row">
-      <input type="range" id="holdDuration" min="300" max="4000" step="100" value="1200">
-      <span class="val" id="holdDurationVal">1200ms</span>
-    </div>
-  </div>
-
-  <div class="control-row">
-    <label>Zoom out</label>
-    <div class="slider-row">
-      <input type="range" id="zoomOutDuration" min="100" max="1000" step="50" value="400">
-      <span class="val" id="zoomOutDurationVal">400ms</span>
-    </div>
-  </div>
-
-  <div class="control-row">
-    <label>Curva de entrada</label>
-    <select id="easingIn">
-      <option value="cubic-bezier(0.25,0.46,0.45,0.94)">Suave</option>
-      <option value="cubic-bezier(0.0,0.0,0.2,1)">Desaceleración</option>
-      <option value="linear">Lineal</option>
-    </select>
-  </div>
-
-  <div class="control-row">
-    <label>Curva de salida</label>
-    <select id="easingOut">
-      <option value="cubic-bezier(0.55,0,1,0.45)">Rebote</option>
-      <option value="cubic-bezier(0.4,0,1,1)">Aceleración</option>
-      <option value="linear">Lineal</option>
-    </select>
-  </div>
-
-  <div class="section-title">Opciones</div>
-
-  <div class="control-row">
-    <label>Activar zoom con</label>
-    <select id="zoomTriggerKey">
-      <option value="none">Cualquier click</option>
-      <option value="Alt">Alt + click</option>
-      <option value="Shift">Shift + click</option>
-      <option value="Control">Ctrl + click</option>
-      <option value="Meta">Cmd + click</option>
-    </select>
-  </div>
 
   <div class="control-row checkbox-row">
-    <label>Audio del tab</label>
-    <input type="checkbox" id="audioCaptureEnabled" checked>
-  </div>
-
-  <div class="control-row checkbox-row">
-    <label>Indicador de click</label>
-    <input type="checkbox" id="clickIndicator" checked>
+    <label>Indicador visual de click (punto rojo)</label>
+    <input type="checkbox" id="clickIndicator">
   </div>
 
   <div class="status-msg" id="statusMsg"></div>

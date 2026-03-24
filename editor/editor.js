@@ -408,34 +408,7 @@ function setupDefaultSliders() {
 // --- Export ---
 exportBtn.addEventListener('click', exportVideo);
 
-// --- FFmpeg zoom filter builder ---
-function buildZoomFilter(enabledClicks, W, H) {
-  let zExpr = '1';
-  let xExpr = '0';
-  let yExpr = '0';
-
-  for (const c of [...enabledClicks].reverse()) {
-    const ts     = c.t / 1000;
-    const zIn    = c.zoomInDuration / 1000;
-    const hold   = c.holdDuration / 1000;
-    const zOut   = c.zoomOutDuration / 1000;
-    const tStart = Math.max(0, ts - zIn);
-    const tEnd   = ts + hold + zOut;
-    const Z      = c.zoomLevel;
-
-    // Linear easing (smooth enough for marketing clips)
-    const inPhase  = `(1+(${Z}-1)*((t-${tStart})/${zIn}))`;
-    const outPhase = `(${Z}-(${Z}-1)*((t-${ts + hold})/${zOut}))`;
-
-    zExpr = `if(between(t\\,${tStart}\\,${ts})\\,${inPhase}\\,if(between(t\\,${ts}\\,${ts + hold})\\,${Z}\\,if(between(t\\,${ts + hold}\\,${tEnd})\\,${outPhase}\\,${zExpr})))`;
-    xExpr = `if(between(t\\,${tStart}\\,${tEnd})\\,max(0\\,min(iw-iw/zoom\\,${c.nx}*iw-iw/zoom/2))\\,${xExpr})`;
-    yExpr = `if(between(t\\,${tStart}\\,${tEnd})\\,max(0\\,min(ih-ih/zoom\\,${c.ny}*ih-ih/zoom/2))\\,${yExpr})`;
-  }
-
-  return `zoompan=z='${zExpr}':x='${xExpr}':y='${yExpr}':fps=30:d=1:s=${W}x${H}`;
-}
-
-// --- FFmpeg export ---
+// --- Export (MediaRecorder) ---
 async function exportVideo() {
   if (!videoBlob) return;
 
@@ -443,60 +416,81 @@ async function exportVideo() {
   previewBtn.disabled = true;
   exportOverlay.style.display = 'flex';
   exportFill.style.width = '0%';
-  exportPercent.textContent = '0%';
+  exportPercent.textContent = 'Grabando (No cambies de pestaña)...';
 
   try {
-    const { createFFmpeg, fetchFile } = window.FFmpeg;
-    const ffmpeg = createFFmpeg({
-      corePath: chrome.runtime.getURL('lib/ffmpeg-core.js'),
-      log: false,
-    });
+    // Positioning at the start
+    seekTo(0);
+    // Give enough time to ensure UI is ready and the frame is painted
+    await new Promise(r => setTimeout(r, 600));
 
-    ffmpeg.setProgress(({ ratio }) => {
-      const pct = Math.min(99, Math.round(ratio * 100));
-      exportFill.style.width = pct + '%';
-      exportPercent.textContent = pct + '%';
-    });
-
-    await ffmpeg.load();
-
-    const inputExt  = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const inputName = `input.${inputExt}`;
-    ffmpeg.FS('writeFile', inputName, await fetchFile(videoBlob));
-
-    const W = sourceVideo.videoWidth;
-    const H = sourceVideo.videoHeight;
-    const enabledClicks = clicks.filter(c => c.enabled);
-
-    const args = ['-i', inputName];
-    if (enabledClicks.length > 0) {
-      args.push('-vf', buildZoomFilter(enabledClicks, W, H));
+    // Capture the stream at 60 FPS for buttery smooth Marketing videos
+    const stream = previewCanvas.captureStream(60);
+    
+    // WebM with VP9 at very high bitrate provides practically loss-less recording on Modern Chrome
+    const options = { mimeType: 'video/webm; codecs=vp9', videoBitsPerSecond: 12000000 };
+    let mediaRecorder;
+    try {
+        mediaRecorder = new MediaRecorder(stream, options);
+    } catch(e) {
+        console.warn('VP9 no soportado en MediaRecorder, usando predeterminado.', e);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm', videoBitsPerSecond: 12000000 });
     }
-    args.push(
-      '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
-      '-c:a', 'aac', '-b:a', '192k',
-      '-movflags', '+faststart',
-      'output.mp4'
-    );
 
-    await ffmpeg.run(...args);
+    const recordedChunks = [];
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        recordedChunks.push(e.data);
+      }
+    };
 
-    const data = ffmpeg.FS('readFile', 'output.mp4');
-    const blob = new Blob([data.buffer], { type: 'video/mp4' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `clip-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.mp4`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edicion-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-    exportFill.style.width = '100%';
-    exportPercent.textContent = '100%';
-    setTimeout(() => {
       exportOverlay.style.display = 'none';
       exportBtn.disabled = false;
       previewBtn.disabled = false;
-    }, 600);
+      
+      // Keep UI clean
+      stopPlaybackLoop();
+      playPauseBtn.textContent = '▶';
+    };
+
+    // Keep chunks small to handle memory easily
+    mediaRecorder.start(100);
+
+    // Run the video in real-time
+    if (sourceVideo.paused) {
+      sourceVideo.play();
+      isPlaying = true;
+      playPauseBtn.textContent = '⏸';
+      startPlaybackLoop();
+    }
+
+    // Progress bar monitor
+    const duration = sourceVideo.duration || 1;
+    const progressInterval = setInterval(() => {
+      const pct = Math.min(100, Math.round((sourceVideo.currentTime / duration) * 100));
+      exportFill.style.width = pct + '%';
+      
+      // Stop the recording when the video naturally finishes
+      if (sourceVideo.ended || sourceVideo.currentTime >= duration) {
+        clearInterval(progressInterval);
+        exportFill.style.width = '100%';
+        exportPercent.textContent = 'Procesando archivo...';
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      } else {
+        exportPercent.textContent = pct + '%';
+      }
+    }, 200);
 
   } catch (err) {
     console.error('[MCR export] Error:', err);
