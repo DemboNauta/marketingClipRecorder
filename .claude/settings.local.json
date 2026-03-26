@@ -6,7 +6,11 @@
       "Bash(python3 -:*)",
       "Bash(node setup.js)",
       "Bash(node -e \":*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx puppeteer:*)",
+      "Bash(npm list:*)",
+      "Bash(npx --yes puppeteer@latest --help)",
+      "Bash(npx playwright:*)"
     ]
   }
 }
