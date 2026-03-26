@@ -62,8 +62,7 @@ async function ensureContentScript(tabId) {
     await chrome.tabs.sendMessage(tabId, { type: 'PING' });
   } catch (e) {
     // Content script not running — inject it now
-    console.log('[MCR bg] injecting content script into tab', tabId);
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
   }
 }
 
@@ -85,9 +84,9 @@ function sendToOffscreen(message) {
 async function startRecording(config, sendResponse) {
   try {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (!tab) { sendResponse({ error: 'No se encontró pestaña activa.' }); return; }
+    if (!tab) { sendResponse({ error: 'No active tab found.' }); return; }
     if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
-      sendResponse({ error: 'No se puede grabar páginas del sistema de Chrome.' }); return;
+      sendResponse({ error: 'Cannot record Chrome system pages.' }); return;
     }
 
     await ensureOffscreenDocument();
@@ -146,19 +145,14 @@ async function stopRecording(sendResponse) {
 // --- Open editor after recording is ready ---
 
 async function openEditor(mimeType, ext, tabId) {
-  console.log('[MCR bg] openEditor: tabId=', tabId, 'mimeType=', mimeType);
-
   // Collect click log from the content script
   let clicks = [];
   if (tabId) {
     const resp = await sendToContentScript(tabId, { type: MSG.GET_CLICKS });
-    console.log('[MCR bg] GET_CLICKS response:', resp);
     if (resp && resp.clicks) clicks = resp.clicks;
   } else {
     console.warn('[MCR bg] openEditor: tabId is null, cannot fetch clicks');
   }
-
-  console.log('[MCR bg] saving', clicks.length, 'clicks to session storage');
 
   // Persist click data and metadata for the editor to read
   await chrome.storage.session.set({
@@ -186,7 +180,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (type === MSG.START_RECORDING) {
     loadState().then(() => {
-      if (isRecording) { sendResponse({ error: 'Ya hay una grabación en curso.' }); return; }
+      if (isRecording) { sendResponse({ error: 'A recording is already in progress.' }); return; }
       startRecording(message.config, sendResponse);
     });
     return true;
@@ -200,7 +194,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (type === MSG.RECORDING_READY) {
     // Offscreen finished — collect clicks and open editor
     chrome.storage.session.get('mcrPendingTabId').then(async (data) => {
-      console.log('[MCR bg] RECORDING_READY, session data:', data);
       const tabId = data.mcrPendingTabId || null;
       await openEditor(message.mimeType, message.ext, tabId);
       await chrome.storage.session.remove('mcrPendingTabId');

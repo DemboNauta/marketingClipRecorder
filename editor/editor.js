@@ -187,12 +187,10 @@ function updateTimelineProgress(t) {
 async function loadData() {
   const data = await chrome.storage.session.get(['mcrEditorClicks', 'mcrEditorMimeType', 'mcrEditorExt']);
 
-  console.log('[MCR editor] loaded from session storage:', data);
   mimeType = data.mcrEditorMimeType || 'video/webm';
   ext = data.mcrEditorExt || 'webm';
 
   const rawClicks = data.mcrEditorClicks || [];
-  console.log('[MCR editor] rawClicks:', rawClicks.length, rawClicks);
   clicks = rawClicks.map(c => ({
     ...c,
     // Normalize coordinates to 0-1 range
@@ -226,7 +224,7 @@ async function loadVideoFromIndexedDB() {
     const req = tx.objectStore('recordings').get('last');
     req.onsuccess = () => {
       if (req.result) resolve(req.result);
-      else reject(new Error('No hay ninguna grabación guardada.'));
+      else reject(new Error('No recording found.'));
     };
     req.onerror = () => reject(req.error);
   });
@@ -276,7 +274,7 @@ function renderClickList() {
       <div class="click-item-header">
         <span class="click-label">Click #${i + 1}</span>
         <span class="click-time">${fmtTime(click.t / 1000)}</span>
-        <input type="checkbox" class="click-toggle" ${click.enabled ? 'checked' : ''} title="Activar zoom">
+        <input type="checkbox" class="click-toggle" ${click.enabled ? 'checked' : ''} title="Enable zoom">
       </div>
       <div class="click-settings">
         <div class="click-setting-row">
@@ -285,17 +283,17 @@ function renderClickList() {
           <span class="val">${click.zoomLevel.toFixed(1)}×</span>
         </div>
         <div class="click-setting-row">
-          <label>Entrada</label>
+          <label>Ease in</label>
           <input type="range" class="p-in" min="100" max="5000" step="50" value="${Math.round(click.zoomInDuration)}">
           <span class="val">${Math.round(click.zoomInDuration)}ms</span>
         </div>
         <div class="click-setting-row">
-          <label>Mantener</label>
+          <label>Hold</label>
           <input type="range" class="p-hold" min="300" max="4000" step="100" value="${click.holdDuration}">
           <span class="val">${click.holdDuration}ms</span>
         </div>
         <div class="click-setting-row">
-          <label>Salida</label>
+          <label>Ease out</label>
           <input type="range" class="p-out" min="100" max="5000" step="50" value="${Math.round(click.zoomOutDuration)}">
           <span class="val">${Math.round(click.zoomOutDuration)}ms</span>
         </div>
@@ -600,7 +598,7 @@ async function exportVideo() {
   previewBtn.disabled = true;
   exportOverlay.style.display = 'flex';
   exportFill.style.width = '0%';
-  exportPercent.textContent = 'Grabando (No cambies de pestaña)...';
+  exportPercent.textContent = 'Recording (do not switch tabs)...';
 
   try {
     // Positioning at the start
@@ -617,7 +615,7 @@ async function exportVideo() {
     try {
         mediaRecorder = new MediaRecorder(stream, options);
     } catch(e) {
-        console.warn('VP9 no soportado en MediaRecorder, usando predeterminado.', e);
+        console.warn('VP9 not supported by MediaRecorder, falling back to default.', e);
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm', videoBitsPerSecond: 12000000 });
     }
 
@@ -633,7 +631,7 @@ async function exportVideo() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `edicion-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+      a.download = `clip-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
 
@@ -667,7 +665,7 @@ async function exportVideo() {
       if (sourceVideo.ended || sourceVideo.currentTime >= duration) {
         clearInterval(progressInterval);
         exportFill.style.width = '100%';
-        exportPercent.textContent = 'Procesando archivo...';
+        exportPercent.textContent = 'Processing file...';
         if (mediaRecorder.state !== 'inactive') {
           mediaRecorder.stop();
         }
@@ -681,7 +679,7 @@ async function exportVideo() {
     exportOverlay.style.display = 'none';
     exportBtn.disabled = false;
     previewBtn.disabled = false;
-    alert('Error al exportar: ' + err.message);
+    alert('Export error: ' + err.message);
   }
 }
 

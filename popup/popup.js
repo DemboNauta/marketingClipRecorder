@@ -65,17 +65,17 @@ function setRecordingUI(recording, recordStartTime = null) {
   if (recording) {
     recordBtn.classList.add('stop');
     btnIcon.textContent = '⏹';
-    btnLabel.textContent = 'Detener';
+    btnLabel.textContent = 'Stop';
     statusDot.classList.add('recording');
     timerEl.classList.add('recording');
     startTime = recordStartTime || Date.now();
     timerInterval = setInterval(updateTimer, 500);
     updateTimer();
-    setStatus('Grabando...', '');
+    setStatus('Recording...', '');
   } else {
     recordBtn.classList.remove('stop');
     btnIcon.textContent = '⏺';
-    btnLabel.textContent = 'Grabar';
+    btnLabel.textContent = 'Record';
     statusDot.classList.remove('recording');
     timerEl.classList.remove('recording');
     clearInterval(timerInterval);
@@ -104,15 +104,15 @@ recordBtn.addEventListener('click', async () => {
     chrome.runtime.sendMessage({ type: 'STOP_RECORDING' }, (resp) => {
       recordBtn.disabled = false;
       if (chrome.runtime.lastError) {
-        setStatus('Error al detener: ' + chrome.runtime.lastError.message, 'error');
+        setStatus('Error stopping: ' + chrome.runtime.lastError.message, 'error');
         return;
       }
       setRecordingUI(false);
-      setStatus('Video descargado.', 'success');
+      setStatus('Video downloaded.', 'success');
     });
   } else {
     recordBtn.disabled = true;
-    setStatus('Iniciando...', '');
+    setStatus('Starting...', '');
 
     const configToStart = Object.assign({}, DEFAULT_CONFIG, {
       clickIndicator: clickIndicatorCheckbox.checked

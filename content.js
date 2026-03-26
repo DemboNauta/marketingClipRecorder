@@ -27,7 +27,6 @@ function activate(cfg, startTime) {
   document.addEventListener('click', onDocClick, true);
   document.addEventListener('keydown', onKeyDown, true);
   
-  console.log('[MCR content] activated, startTime:', startTime, 'triggerKey:', cfg.zoomTriggerKey);
 }
 
 function deactivate() {
@@ -92,8 +91,6 @@ function onDocClick(e) {
     vw: window.innerWidth,
     vh: window.innerHeight,
   });
-  console.log('[MCR content] click tracked:', { t, x: e.clientX, y: e.clientY }, 'total:', clickLog.length);
-
   spawnRipple(e.clientX, e.clientY);
 }
 
@@ -123,7 +120,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message.type === MSG.CONFIG_UPDATED) {
     config = Object.assign({}, config, message.config);
   } else if (message.type === MSG.GET_CLICKS) {
-    console.log('[MCR content] GET_CLICKS requested, sending', clickLog.length, 'clicks');
     sendResponse({ clicks: clickLog });
     return true;
   }
