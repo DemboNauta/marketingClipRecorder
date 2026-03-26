@@ -8,13 +8,13 @@ A Chrome extension for recording browser tabs with automatic smooth zoom effects
 
 > **Popup — start/stop recording**
 
-<!-- Add a screenshot or GIF of the popup here -->
-![Popup screenshot](docs/popup.png)
+<img width="359" height="249" alt="image" src="https://github.com/user-attachments/assets/2f74ef6c-7a75-4a18-95f4-0208fb25d1a7" />
+
 
 > **Clip Editor — timeline & zoom controls**
 
-<!-- Add a screenshot or GIF of the editor here -->
-![Editor screenshot](docs/editor.png)
+<img width="1916" height="990" alt="image" src="https://github.com/user-attachments/assets/3a031412-361c-4eb2-864f-39ac2b1124e3" />
+
 
 ---
 
