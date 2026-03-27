@@ -101,13 +101,6 @@ This extension is not published on the Chrome Web Store. Install it as an unpack
 
 ## License
 
-Copyright (c) 2026 Edgar Milá
+MIT License — Copyright (c) 2026 Edgar Milá
 
-Permission is granted to use, copy, modify, and distribute this software
-for personal and non-commercial purposes only, provided that this copyright
-notice is included in all copies.
-
-Commercial use of this software or any derivative works is strictly prohibited
-without prior written permission from the author.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+Free to use, modify, distribute, and use commercially. See [LICENSE](LICENSE) for details.
