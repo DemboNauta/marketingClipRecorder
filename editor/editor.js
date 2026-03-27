@@ -42,6 +42,19 @@ const exportFill = document.getElementById('exportFill');
 const exportPercent = document.getElementById('exportPercent');
 const timeline = document.getElementById('timeline');
 
+// --- Audio capture for export ---
+let audioCtx = null;
+let audioExportDestination = null;
+
+function ensureAudioCapture() {
+  if (audioCtx) return;
+  audioCtx = new AudioContext();
+  const sourceNode = audioCtx.createMediaElementSource(sourceVideo);
+  audioExportDestination = audioCtx.createMediaStreamDestination();
+  sourceNode.connect(audioCtx.destination);
+  sourceNode.connect(audioExportDestination);
+}
+
 // --- Easing functions ---
 const easings = {
   in:     t => t * t * t,
@@ -607,7 +620,9 @@ async function exportVideo() {
     await new Promise(r => setTimeout(r, 600));
 
     // Capture the stream at 60 FPS for buttery smooth Marketing videos
+    ensureAudioCapture();
     const stream = previewCanvas.captureStream(60);
+    audioExportDestination.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     
     // WebM with VP9 at very high bitrate provides practically loss-less recording on Modern Chrome
     const options = { mimeType: 'video/webm; codecs=vp9', videoBitsPerSecond: 12000000 };

@@ -7,6 +7,7 @@ const MSG = {
   RECORDING_STARTED: 'RECORDING_STARTED',
   RECORDING_STOPPED: 'RECORDING_STOPPED',
   RECORDING_READY:   'RECORDING_READY',
+  RECORDING_ERROR:   'RECORDING_ERROR',
   CONFIG_UPDATED:    'CONFIG_UPDATED',
   GET_STATE:         'GET_STATE',
   GET_CLICKS:        'GET_CLICKS',
@@ -198,6 +199,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await openEditor(message.mimeType, message.ext, tabId);
       await chrome.storage.session.remove('mcrPendingTabId');
     });
+    return false;
+  }
+
+  if (type === MSG.RECORDING_ERROR) {
+    console.error('[MCR] Recording failed in offscreen:', message.error);
+    closeOffscreenDocument().then(() => clearState());
     return false;
   }
 

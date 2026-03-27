@@ -1,9 +1,10 @@
 'use strict';
 
 const MSG = {
-  INIT_RECORDING:  'INIT_RECORDING',
-  STOP_RECORDING:  'STOP_RECORDING',
-  RECORDING_READY: 'RECORDING_READY',
+  INIT_RECORDING:   'INIT_RECORDING',
+  STOP_RECORDING:   'STOP_RECORDING',
+  RECORDING_READY:  'RECORDING_READY',
+  RECORDING_ERROR:  'RECORDING_ERROR',
 };
 
 let mediaRecorder = null;
@@ -14,7 +15,6 @@ let currentMimeType = 'video/webm';
 
 const MIME_TYPES = [
   'video/mp4;codecs=avc1,mp4a.40.2',
-  'video/mp4;codecs=avc1',
   'video/mp4',
   'video/webm;codecs=vp9,opus',
   'video/webm;codecs=vp8,opus',
@@ -95,6 +95,7 @@ async function startRecording(streamId, config) {
   } catch (err) {
     console.error('[MCR Offscreen] startRecording failed:', err);
     cleanup();
+    chrome.runtime.sendMessage({ type: MSG.RECORDING_ERROR, error: err.message });
   }
 }
 
